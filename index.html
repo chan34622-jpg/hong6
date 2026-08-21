@@ -618,13 +618,42 @@
 
     <div class="pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-steel-400">
       <p>© 2026 홍익기술사사무소. All rights reserved.</p>
-      <div class="flex items-center gap-4">
-        <p>대표: 강상찬</p>
-        <span id="adminArea"></span>
-      </div>
+      <p>대표: 강상찬</p>
     </div>
   </div>
 </footer>
+
+<!-- ===== 관리자 로그인 버튼 (우측 하단 고정) ===== -->
+<button id="adminFab" type="button" aria-label="관리자 로그인"
+  class="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-navy-700 hover:bg-navy-800 text-white shadow-lg shadow-navy-900/25 flex items-center justify-center transition-colors">
+  <svg id="adminFabIcon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v2" />
+  </svg>
+</button>
+
+<!-- ===== 관리자 로그인 모달 ===== -->
+<div id="adminModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6">
+  <div id="adminModalBackdrop" class="absolute inset-0 bg-navy-900/40"></div>
+  <div class="relative w-full max-w-sm rounded-2xl bg-white border border-steel-200 shadow-2xl p-8">
+    <button id="adminModalClose" type="button" aria-label="닫기" class="absolute top-4 right-4 text-steel-400 hover:text-navy-700 transition-colors">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+    <h3 class="font-display font-bold text-lg text-navy-900">관리자 로그인</h3>
+    <p class="mt-1 text-xs text-steel-500">비공개 상담신청 확인 및 게시판 관리를 위한 관리자 전용 로그인입니다.</p>
+    <form id="adminLoginForm" class="mt-6 space-y-4">
+      <div>
+        <label class="text-xs text-steel-500">아이디</label>
+        <input id="adminId" type="text" required autocomplete="username" class="mt-1.5 w-full rounded-lg bg-white border border-steel-300 focus:border-navy-500 focus:ring-1 focus:ring-navy-500 outline-none px-4 py-3 text-sm text-navy-900 placeholder-steel-400" />
+      </div>
+      <div>
+        <label class="text-xs text-steel-500">비밀번호</label>
+        <input id="adminPw" type="password" required autocomplete="current-password" class="mt-1.5 w-full rounded-lg bg-white border border-steel-300 focus:border-navy-500 focus:ring-1 focus:ring-navy-500 outline-none px-4 py-3 text-sm text-navy-900 placeholder-steel-400" />
+      </div>
+      <p id="adminLoginError" class="hidden text-xs text-red-500"></p>
+      <button type="submit" class="w-full rounded-full bg-sunset-500 hover:bg-sunset-600 transition-colors px-6 py-3 text-sm font-semibold text-white">로그인</button>
+    </form>
+  </div>
+</div>
 
 <script src="js/store.js"></script>
 <script>
@@ -632,20 +661,68 @@
     document.getElementById('mobileMenu').classList.toggle('hidden');
   });
 
-  // ---- 관리자 링크 (footer) ----
+  // ---- 관리자 로그인 버튼 (우측 하단 고정) ----
+  const adminFab = document.getElementById('adminFab');
+  const adminFabIcon = document.getElementById('adminFabIcon');
+  const adminModal = document.getElementById('adminModal');
+  const ICON_LOCKED = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v2" />';
+  const ICON_UNLOCKED = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zM8 9V7a4 4 0 118 0" />';
+
   function renderAdmin() {
-    const area = document.getElementById('adminArea');
     if (STORE.isAdmin()) {
-      area.innerHTML = `<span class="text-navy-600 font-medium">관리자</span> · <button id="adminLogoutBtn" class="hover:text-navy-700 transition-colors">로그아웃</button>`;
-      document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      adminFab.classList.remove('bg-navy-700', 'hover:bg-navy-800');
+      adminFab.classList.add('bg-leaf-600', 'hover:bg-leaf-700');
+      adminFab.setAttribute('aria-label', '관리자 로그아웃');
+      adminFabIcon.innerHTML = ICON_UNLOCKED;
+    } else {
+      adminFab.classList.remove('bg-leaf-600', 'hover:bg-leaf-700');
+      adminFab.classList.add('bg-navy-700', 'hover:bg-navy-800');
+      adminFab.setAttribute('aria-label', '관리자 로그인');
+      adminFabIcon.innerHTML = ICON_LOCKED;
+    }
+  }
+
+  function openAdminModal() {
+    document.getElementById('adminId').value = '';
+    document.getElementById('adminPw').value = '';
+    document.getElementById('adminLoginError').classList.add('hidden');
+    adminModal.classList.remove('hidden');
+    document.getElementById('adminId').focus();
+  }
+
+  function closeAdminModal() {
+    adminModal.classList.add('hidden');
+  }
+
+  adminFab.addEventListener('click', () => {
+    if (STORE.isAdmin()) {
+      if (confirm('관리자 로그아웃 하시겠습니까?')) {
         STORE.adminLogout();
         renderAdmin();
         renderInquiries();
-      });
+      }
     } else {
-      area.innerHTML = `<a href="login.html" class="hover:text-navy-700 transition-colors">관리자 로그인</a>`;
+      openAdminModal();
     }
-  }
+  });
+
+  document.getElementById('adminModalClose').addEventListener('click', closeAdminModal);
+  document.getElementById('adminModalBackdrop').addEventListener('click', closeAdminModal);
+
+  document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('adminId').value.trim();
+    const pw = document.getElementById('adminPw').value;
+    if (STORE.adminLogin(id, pw)) {
+      closeAdminModal();
+      renderAdmin();
+      renderInquiries();
+    } else {
+      const err = document.getElementById('adminLoginError');
+      err.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+      err.classList.remove('hidden');
+    }
+  });
 
   // ---- 무료 상담 신청 ----
   function escapeHtml(str) {
